@@ -1,0 +1,56 @@
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Layout/LineLength:
+  Max: 120
+
+Metrics/MethodLength:
+  Max: 55
+
+Metrics/ClassLength:
+  Max: 200
+
+Metrics/AbcSize:
+  Max: 37
+
+Metrics/CyclomaticComplexity:
+  Max: 12
+
+Metrics/PerceivedComplexity:
+  Max: 12
+
+Metrics/BlockLength:
+  Enabled: false
+
+Naming/PredicatePrefix:
+  Enabled: false
+
+Lint/DuplicateBranch:
+  Enabled: false
+
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+Gemspec/RequireMFA:
+  Enabled: false
+
+Lint/SuppressedException:
+  Enabled: false
+
+Style/SpecialGlobalVars:
+  Enabled: false
+

@@ -1,0 +1,118 @@
+shared: &shared
+  user: ubuntu
+  ssh_key: ~/.ssh/id_rsa
+  forward_agent: true # allow remote commands to use your local agent
+  use_ssh_agent: false # disable agent-based auth to avoid too many auth attempts
+  ssh_auth_methods:
+    - publickey
+
+development:
+  <<: *shared
+
+  services:
+    - name: redis
+      enabled: true
+      hosts:
+        - localhost
+      port: 6379
+      memory_mb: 256
+
+staging:
+  <<: *shared
+
+  services:
+    - name: memcached
+      enabled: true
+      hosts:
+        - 10.8.0.20
+      port: 11211
+      memory_mb: 128
+
+    - name: redis
+      enabled: true
+      hosts:
+        - 10.8.0.21
+      port: 6379
+      memory_mb: 512
+
+    - name: haproxy
+      enabled: true
+      hosts:
+        - 10.8.0.30
+      port: 80
+      stats_port: 8404
+      backends:
+        - host: 10.8.0.10
+          port: 3000
+        - host: 10.8.0.11
+          port: 3000
+
+production:
+  <<: *shared
+
+  services:
+    # Multi-region Memcached deployment
+    - name: memcached
+      enabled: true
+      host: 54.123.45.67        # Public IP for SSH
+      private_ip: 10.8.0.20     # Private VPN IP (optional)
+      label: cache-us-east
+      port: 11211
+      memory_mb: 256
+
+    - name: memcached
+      enabled: true
+      host: 52.234.56.78        # Public IP for SSH
+      private_ip: 10.8.0.21     # Private VPN IP (optional)
+      label: cache-us-west
+      port: 11211
+      memory_mb: 256
+
+    # Redis with custom parameters
+    - name: redis
+      enabled: true
+      host: 18.234.67.89
+      private_ip: 10.8.0.30
+      label: redis-primary
+      port: 6379
+      memory_mb: 1024
+
+    # HAProxy with SSL and custom parameters
+    - name: haproxy
+      enabled: true
+      host: 34.123.78.90
+      private_ip: 10.8.0.40
+      label: load-balancer-us
+      port: 80
+      https_port: 443
+      stats_port: 8404
+      ssl: true
+      ssl_cert: $(op read "op://MyVault/haproxy-ssl/certificate")
+      ssl_key: $(op read "op://MyVault/haproxy-ssl/private_key")
+      custom_params:
+        timeout_connect: 10000
+        timeout_client: 60000
+        timeout_server: 60000
+        balance: leastconn
+        health_check_path: /healthz
+      backends:
+        - host: 10.8.0.10     # Private IPs for backend communication
+          port: 3000
+        - host: 10.8.0.11
+          port: 3000
+
+    # Nginx example (disabled by default)
+    - name: nginx
+      enabled: false
+      host: 35.234.89.01
+      label: nginx-us-east
+      port: 80
+      ssl: true
+      backends:
+        - host: 10.8.0.10
+          port: 3000
+        - host: 10.8.0.11
+          port: 3000
+
+  secrets:
+    redis_password: $REDIS_PASSWORD

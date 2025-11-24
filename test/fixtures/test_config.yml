@@ -1,0 +1,26 @@
+test:
+  user: testuser
+  ssh_key: ~/.ssh/test_key
+  forward_agent: false
+  use_ssh_agent: true
+  ssh_auth_methods:
+    - publickey
+    - password
+  services:
+    - name: redis
+      enabled: true
+      hosts:
+        - 10.0.0.1
+      port: 6379
+    - name: memcached
+      enabled: false
+      hosts:
+        - 10.0.0.2
+      port: 11211
+
+production:
+  services:
+    - name: nginx
+      enabled: true
+      hosts:
+        - 10.1.0.1
