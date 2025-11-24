@@ -96,7 +96,7 @@ class ConfigurationTest < Minitest::Test
 
   def test_ssh_auth_methods
     config = BoringServices::Configuration.new(fixture_path('test_config.yml'), 'test')
-    assert_equal ['publickey', 'password'], config.ssh_auth_methods
+    assert_equal %w[publickey password], config.ssh_auth_methods
   end
 
   def test_ssh_auth_methods_defaults_to_publickey

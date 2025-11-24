@@ -29,6 +29,4 @@ require 'stringio'
 
 # Load railtie if Rails is already loaded (safe to require Rails components)
 # This avoids load order issues with ActiveSupport
-if defined?(Rails::Railtie)
-  require_relative 'boring_services/railtie'
-end
+require_relative 'boring_services/railtie' if defined?(Rails::Railtie)
