@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
                      'like Memcached, Redis, HAProxy, and Nginx. Works standalone or with Rails.'
   spec.homepage = 'https://github.com/boringcache/boring_services'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 3.4.0'
+  spec.required_ruby_version = '>= 3.4'
 
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/boringcache/boring_services'
