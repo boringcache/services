@@ -9,7 +9,8 @@ module BoringServices
           configure_haproxy
           validate_config
           ssh_executor.systemd_enable('haproxy')
-          ssh_executor.systemd_start('haproxy')
+          ssh_executor.systemd_restart('haproxy')  # Use restart instead of start to reload config
+          verify_listening_ports
         end
       end
 
@@ -29,6 +30,17 @@ module BoringServices
         end
       end
 
+      def reconfigure
+        execute_on_host do
+          puts "  Reconfiguring HAProxy on #{label || host}..."
+          setup_ssl_certificates if ssl_enabled?
+          configure_haproxy
+          validate_config
+          ssh_executor.systemd_restart('haproxy')
+          verify_listening_ports
+        end
+      end
+
       private
 
       def ssl_enabled?
@@ -45,8 +57,12 @@ module BoringServices
         execute :sudo, :mkdir, '-p', '/etc/haproxy/ssl'
         execute :sudo, :chmod, '750', '/etc/haproxy/ssl'
 
-        ssl_cert = resolve_secret(service_config['ssl_cert'])
-        ssl_key = resolve_secret(service_config['ssl_key'])
+        # Support multiple ways to provide certificates:
+        # 1. Direct file paths: ssl_cert_path: /path/to/cert.pem
+        # 2. Credentials reference: ssl_cert: "credentials:ssl.certificate"
+        # 3. Inline content: ssl_cert: "-----BEGIN CERTIFICATE-----..."
+        ssl_cert = resolve_ssl_content('ssl_cert')
+        ssl_key = resolve_ssl_content('ssl_key')
 
         if ssl_cert && ssl_key
           combined_pem = "#{ssl_cert}\n#{ssl_key}"
@@ -58,6 +74,22 @@ module BoringServices
         else
           puts '    ⚠ SSL enabled but no certificates provided, using self-signed'
           generate_self_signed_cert
+        end
+      end
+
+      def resolve_ssl_content(key)
+        value = service_config[key]
+        return nil unless value
+
+        # Check if it's a file path
+        if value.start_with?('/') && File.exist?(value)
+          File.read(value)
+        # Check if it's a credentials reference
+        elsif value.start_with?('credentials:')
+          resolve_secret(value)
+        # Otherwise treat as inline content
+        else
+          value
         end
       end
 
@@ -154,30 +186,37 @@ module BoringServices
 
                               frontend https_front
                                   bind *:#{https_port} ssl crt #{ssl_cert_path}
-                                  http-request redirect scheme https code 301 unless { ssl_fc }
+                                  http-request set-header X-Forwarded-Proto https
                                   default_backend web_servers
 
                               frontend http_front
                                   bind *:#{frontend_port}
-                                  redirect scheme https code 301
+                                  http-request set-header X-Forwarded-Proto http
+                                  default_backend web_servers
                             HAPROXY
                           else
                             <<~HAPROXY
 
                               frontend http_front
                                   bind *:#{frontend_port}
+                                  http-request set-header X-Forwarded-Proto http
                                   default_backend web_servers
                             HAPROXY
                           end
 
-        # Get health check path from custom params or use default
-        health_check_path = custom['health_check_path'] || '/health'
+        # Get health check path from service config, custom params, or use default
+        health_check_path = service_config['health_check_path'] || custom['health_check_path'] || '/health'
+        health_check_domain = service_config['health_check_domain'] || custom['health_check_domain'] || host
 
         config_content += <<~HAPROXY
 
           backend web_servers
               balance #{balance_algorithm}
-              option httpchk GET #{health_check_path}
+              option forwardfor
+              http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+              # Health check with proper headers
+              option httpchk
+              http-check send meth GET uri #{health_check_path} hdr Host #{health_check_domain}
         HAPROXY
 
         backends.each_with_index do |backend, idx|
@@ -201,6 +240,33 @@ module BoringServices
         execute :sudo, :chmod, '644', '/etc/haproxy/haproxy.cfg'
       end
       # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+
+      def verify_listening_ports
+        puts '    Verifying HAProxy is listening on ports...'
+
+        # Wait a moment for HAProxy to fully start
+        sleep 2
+
+        # Check if HAProxy is listening on expected ports
+        frontend_port = port || 80
+        https_port = service_config['https_port'] || 443
+        stats_port = service_config['stats_port'] || 8404
+
+        ports_to_check = [frontend_port]
+        ports_to_check << https_port if ssl_enabled?
+        ports_to_check << stats_port
+
+        ports_to_check.each do |check_port|
+          result = execute :sudo, :ss, '-tlnp', '|', :grep, "-E", "':#{check_port} '", raise_on_error: false
+          if result
+            puts "    ✓ Port #{check_port} is listening"
+          else
+            puts "    ✗ Warning: Port #{check_port} is not listening"
+          end
+        end
+
+        puts '    ✓ HAProxy port verification complete'
+      end
     end
   end
 end

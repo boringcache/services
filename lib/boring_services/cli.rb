@@ -58,6 +58,21 @@ module BoringServices
       exit 1
     end
 
+    desc 'reconfigure [SERVICE]', 'Reconfigure service(s) - skips package installation, only updates config and restarts'
+    def reconfigure(service_name = nil)
+      config = Configuration.load(options[:config], options[:environment])
+      installer = Installer.new(config)
+
+      if service_name
+        installer.reconfigure_service(service_name)
+      else
+        installer.reconfigure_all
+      end
+    rescue Error => e
+      puts "Error: #{e.message}"
+      exit 1
+    end
+
     desc 'status', 'Check health status of all services'
     def status
       Configuration.load(options[:config], options[:environment])

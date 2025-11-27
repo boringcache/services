@@ -40,7 +40,24 @@ staging:
       hosts:
         - 10.8.0.30
       port: 80
+      https_port: 443                           # Optional: HTTPS port (default: 443)
       stats_port: 8404
+      health_check_path: /up                    # Health check endpoint (default: /health)
+
+      # SSL Configuration (optional) - choose one method:
+      ssl: true
+      # Method 1: Use Rails credentials (recommended for Rails apps)
+      ssl_cert: "credentials:ssl.certificate"   # Reference to Rails.application.credentials.ssl.certificate
+      ssl_key: "credentials:ssl.key"            # Reference to Rails.application.credentials.ssl.key
+
+      # Method 2: Use file paths
+      # ssl_cert: "/path/to/cert.pem"
+      # ssl_key: "/path/to/key.pem"
+
+      # Method 3: Inline content (not recommended for production)
+      # ssl_cert: "-----BEGIN CERTIFICATE-----\n..."
+      # ssl_key: "-----BEGIN PRIVATE KEY-----\n..."
+
       backends:
         - host: 10.8.0.10
           port: 3000

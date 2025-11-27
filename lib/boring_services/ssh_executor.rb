@@ -30,13 +30,49 @@ module BoringServices
     def install_package(package, host = nil)
       if host
         execute_on_host(host) do
+          wait_for_dpkg_lock
           execute :sudo, 'apt-get', 'update'
           execute :sudo, 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', package
         end
       else
         # Called from within SSHKit context
+        wait_for_dpkg_lock
         backend.execute :sudo, 'apt-get', 'update'
         backend.execute :sudo, 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', package
+      end
+    end
+
+    def wait_for_dpkg_lock
+      # Wait for dpkg/apt locks to be released (e.g., unattended-upgrades)
+      max_wait = 300  # 5 minutes max
+      wait_interval = 10  # Check every 10 seconds
+      elapsed = 0
+
+      loop do
+        # Check if dpkg lock exists and is held by another process
+        lock_held = backend.test '[ -f /var/lib/dpkg/lock-frontend ]'
+
+        if lock_held
+          # Check if lock is actually held by checking fuser
+          processes = backend.capture(:sudo, :fuser, '/var/lib/dpkg/lock-frontend', '2>/dev/null', raise_on_non_zero_exit: false).strip
+
+          if processes.empty?
+            # Lock file exists but no process holding it - safe to proceed
+            break
+          end
+
+          if elapsed >= max_wait
+            puts "    ⚠ Warning: dpkg lock still held after #{max_wait}s, proceeding anyway..."
+            break
+          end
+
+          puts "    ⏳ Waiting for dpkg lock to be released (#{elapsed}s elapsed)..."
+          sleep wait_interval
+          elapsed += wait_interval
+        else
+          # No lock file - safe to proceed
+          break
+        end
       end
     end
 

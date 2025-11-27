@@ -34,6 +34,11 @@ namespace :boring_services do
     boringservices_cli('restart')
   end
 
+  desc 'Reconfigure all services (skip package install, update config only)'
+  task :reconfigure do
+    boringservices_cli('reconfigure')
+  end
+
   desc 'Show services status'
   task :status do
     puts "\n🔧 Infrastructure Services Status\n\n"

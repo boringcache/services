@@ -21,6 +21,10 @@ module BoringServices
         raise NotImplementedError, 'Subclasses must implement #restart'
       end
 
+      def reconfigure
+        raise NotImplementedError, 'Subclasses must implement #reconfigure'
+      end
+
       protected
 
       def service_name
