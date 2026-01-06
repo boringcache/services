@@ -7,7 +7,7 @@ module BoringServices
           ssh_executor.install_package('memcached')
           configure_memcached
           ssh_executor.systemd_enable('memcached')
-          ssh_executor.systemd_start('memcached')
+          ssh_executor.systemd_restart('memcached')
         end
         rails_credentials_entry
       end

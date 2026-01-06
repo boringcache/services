@@ -1,9 +1,14 @@
+# frozen_string_literal: true
+
 require 'sshkit'
 require 'sshkit/dsl'
 
 module BoringServices
   class SSHExecutor
     include SSHKit::DSL
+
+    DPKG_LOCK_MAX_WAIT = 300
+    DPKG_LOCK_INTERVAL = 10
 
     attr_reader :config
 
@@ -35,7 +40,6 @@ module BoringServices
           execute :sudo, 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', package
         end
       else
-        # Called from within SSHKit context
         wait_for_dpkg_lock
         backend.execute :sudo, 'apt-get', 'update'
         backend.execute :sudo, 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', package
@@ -43,36 +47,23 @@ module BoringServices
     end
 
     def wait_for_dpkg_lock
-      # Wait for dpkg/apt locks to be released (e.g., unattended-upgrades)
-      max_wait = 300  # 5 minutes max
-      wait_interval = 10  # Check every 10 seconds
       elapsed = 0
 
       loop do
-        # Check if dpkg lock exists and is held by another process
-        lock_held = backend.test '[ -f /var/lib/dpkg/lock-frontend ]'
+        break unless backend.test '[ -f /var/lib/dpkg/lock-frontend ]'
 
-        if lock_held
-          # Check if lock is actually held by checking fuser
-          processes = backend.capture(:sudo, :fuser, '/var/lib/dpkg/lock-frontend', '2>/dev/null', raise_on_non_zero_exit: false).strip
+        processes = backend.capture(:sudo, :fuser, '/var/lib/dpkg/lock-frontend', '2>/dev/null',
+                                    raise_on_non_zero_exit: false).strip
+        break if processes.empty?
 
-          if processes.empty?
-            # Lock file exists but no process holding it - safe to proceed
-            break
-          end
-
-          if elapsed >= max_wait
-            puts "    ⚠ Warning: dpkg lock still held after #{max_wait}s, proceeding anyway..."
-            break
-          end
-
-          puts "    ⏳ Waiting for dpkg lock to be released (#{elapsed}s elapsed)..."
-          sleep wait_interval
-          elapsed += wait_interval
-        else
-          # No lock file - safe to proceed
+        if elapsed >= DPKG_LOCK_MAX_WAIT
+          puts "    ⚠ Warning: dpkg lock still held after #{DPKG_LOCK_MAX_WAIT}s, proceeding anyway..."
           break
         end
+
+        puts "    ⏳ Waiting for dpkg lock to be released (#{elapsed}s elapsed)..."
+        sleep DPKG_LOCK_INTERVAL
+        elapsed += DPKG_LOCK_INTERVAL
       end
     end
 
@@ -119,9 +110,7 @@ module BoringServices
 
     def systemd_start(service_name, host = nil)
       if host
-        execute_on_host(host) do
-          execute :sudo, 'systemctl', 'start', service_name
-        end
+        execute_on_host(host) { execute :sudo, 'systemctl', 'start', service_name }
       else
         backend.execute :sudo, 'systemctl', 'start', service_name
       end
@@ -129,9 +118,7 @@ module BoringServices
 
     def systemd_stop(service_name, host = nil)
       if host
-        execute_on_host(host) do
-          execute :sudo, 'systemctl', 'stop', service_name
-        end
+        execute_on_host(host) { execute :sudo, 'systemctl', 'stop', service_name }
       else
         backend.execute :sudo, 'systemctl', 'stop', service_name
       end
@@ -139,9 +126,7 @@ module BoringServices
 
     def systemd_restart(service_name, host = nil)
       if host
-        execute_on_host(host) do
-          execute :sudo, 'systemctl', 'restart', service_name
-        end
+        execute_on_host(host) { execute :sudo, 'systemctl', 'restart', service_name }
       else
         backend.execute :sudo, 'systemctl', 'restart', service_name
       end
@@ -149,9 +134,7 @@ module BoringServices
 
     def systemd_disable(service_name, host = nil)
       if host
-        execute_on_host(host) do
-          execute :sudo, 'systemctl', 'disable', service_name
-        end
+        execute_on_host(host) { execute :sudo, 'systemctl', 'disable', service_name }
       else
         backend.execute :sudo, 'systemctl', 'disable', service_name
       end
@@ -159,21 +142,28 @@ module BoringServices
 
     def systemd_status(service_name, host = nil)
       if host
-        result = nil
+        output = nil
         execute_on_host(host) do
-          result = capture :sudo, 'systemctl', 'status', service_name, raise_on_non_zero_exit: false
+          output = capture :sudo, 'systemctl', 'status', service_name, raise_on_non_zero_exit: false
         end
-        result
+        output
       else
         backend.capture :sudo, 'systemctl', 'status', service_name, raise_on_non_zero_exit: false
       end
     end
 
+    def capture_on_host(host, *args)
+      output = nil
+      execute_on_host(host) do
+        output = capture(*args, raise_on_non_zero_exit: false)
+      end
+      output
+    end
+
     private
 
     def backend
-      SSHKit::Backend.current ||
-        raise('SSHKit backend is not available. Provide a host or call within execute_on_host.')
+      SSHKit::Backend.current || raise(Error, 'SSHKit backend not available')
     end
 
     def setup_sshkit
@@ -195,12 +185,19 @@ module BoringServices
         target_host = host['host'] || host[:host]
         raise Error, 'Host entry missing host field' unless target_host
 
-        user = host['user'] || host[:user] || config.user
-        "#{user}@#{target_host}"
+        build_sshkit_host(target_host, host['user'] || host[:user])
       else
         host_string = host.to_s
-        host_string.include?('@') ? host_string : "#{config.user}@#{host_string}"
+        return SSHKit::Host.new(host_string) if host_string.include?('@')
+
+        build_sshkit_host(host_string, nil)
       end
+    end
+
+    def build_sshkit_host(hostname, user)
+      sshkit_host = SSHKit::Host.new(hostname)
+      sshkit_host.user = user || config.user
+      sshkit_host
     end
   end
 end

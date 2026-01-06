@@ -37,6 +37,7 @@ module BoringServices
         config_content = <<~REDIS
           bind 0.0.0.0
           port #{listen_port}
+          dir /var/lib/redis
           maxmemory #{memory}mb
           maxmemory-policy allkeys-lru
           appendonly yes
@@ -49,6 +50,10 @@ module BoringServices
         execute :sudo, :mv, '/tmp/redis.conf', '/etc/redis/redis.conf'
         execute :sudo, :chown, 'redis:redis', '/etc/redis/redis.conf'
         execute :sudo, :chmod, '640', '/etc/redis/redis.conf'
+
+        # Set vm.overcommit_memory for Redis background saves
+        execute :sudo, :sysctl, '-w', 'vm.overcommit_memory=1'
+        execute "echo 'vm.overcommit_memory = 1' | sudo tee -a /etc/sysctl.conf > /dev/null || true"
       end
     end
   end
