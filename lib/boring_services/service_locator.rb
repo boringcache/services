@@ -11,40 +11,31 @@ module BoringServices
     # Get all hosts for a service
     # Returns array of host hashes with :host, :private_ip, :label keys
     def hosts_for(service_name)
-      service = config.service_config(service_name.to_s)
-      return [] unless service
+      services = config.services.select { |s| s['name'] == service_name.to_s }
+      return [] if services.empty?
 
-      normalize_hosts(service['hosts'] || [])
+      services.flat_map { |service| normalize_service_hosts(service) }
     end
 
-    # Get the connection IP for a service by region/label
-    # Prefers private_ip, falls back to host
-    # Label matching: "redis-eu" matches region "eu", "redis-us" matches "us"
-    def host_for_region(service_name, region)
-      return nil if region.to_s.strip.empty?
-
+    # Get host by exact label match
+    def host_by_label(service_name, label)
       hosts = hosts_for(service_name)
-      host_entry = hosts.find do |h|
-        label = h[:label].to_s.downcase
-        region_str = region.to_s.downcase
-        label == region_str || label.end_with?("-#{region_str}") || label.start_with?("#{region_str}-")
-      end
-
+      host_entry = hosts.find { |h| h[:label] == label.to_s }
       return nil unless host_entry
 
       connection_ip(host_entry)
     end
 
-    # Get the first available host for a service (prefers private_ip)
-    def primary_host(service_name)
-      hosts = hosts_for(service_name)
-      return nil if hosts.empty?
-
-      connection_ip(hosts.first)
+    # Get all hosts as a hash keyed by label
+    # { "redis-eu-gcp" => "10.8.0.10", "redis-us-aws" => "10.8.0.60" }
+    def hosts_by_label(service_name)
+      hosts_for(service_name).each_with_object({}) do |h, hash|
+        hash[h[:label]] = connection_ip(h) if h[:label]
+      end
     end
 
     # Get all connection IPs for a service (prefers private_ip for each)
-    def all_hosts(service_name)
+    def all_ips(service_name)
       hosts_for(service_name).map { |h| connection_ip(h) }
     end
 
@@ -54,9 +45,9 @@ module BoringServices
       service&.dig('port')
     end
 
-    # Build a Redis URL for a region
-    def redis_url(region: nil, password: nil, db: 0)
-      host = region ? host_for_region('redis', region) : primary_host('redis')
+    # Build a Redis URL for a specific label
+    def redis_url(label: nil, password: nil, db: 0)
+      host = label ? host_by_label('redis', label) : all_ips('redis').first
       return nil unless host
 
       port = port_for('redis') || 6379
@@ -65,12 +56,12 @@ module BoringServices
     end
 
     # Build memcached connection string (host:port,host:port format)
-    def memcached_servers(region: nil)
-      hosts = if region
-                host = host_for_region('memcached', region)
+    def memcached_servers(label: nil)
+      hosts = if label
+                host = host_by_label('memcached', label)
                 host ? [host] : []
               else
-                all_hosts('memcached')
+                all_ips('memcached')
               end
 
       return nil if hosts.empty?
@@ -81,8 +72,20 @@ module BoringServices
 
     private
 
-    # Normalize hosts array - handles both simple strings and hashes
-    def normalize_hosts(hosts)
+    # Normalize hosts from a service config
+    # Handles: single host:, array hosts:, or hosts: as array of hashes
+    def normalize_service_hosts(service)
+      # Single host entry (production style)
+      if service['host']
+        return [{
+          host: service['host'],
+          private_ip: service['private_ip'],
+          label: service['label']
+        }]
+      end
+
+      # Array of hosts
+      hosts = service['hosts'] || []
       hosts.map do |h|
         if h.is_a?(Hash)
           {

@@ -39,9 +39,14 @@ module BoringServices
 
     # Convenience methods - delegate to locator
 
-    # Get Redis host for a region (e.g., "eu", "us")
-    def redis_host(region = nil)
-      region ? locator.host_for_region('redis', region) : locator.primary_host('redis')
+    # Get all Redis hosts as hash { label => private_ip }
+    def redis_hosts
+      locator.hosts_by_label('redis')
+    end
+
+    # Get Redis host by exact label
+    def redis_host(label)
+      locator.host_by_label('redis', label)
     end
 
     # Get Redis port
@@ -49,14 +54,19 @@ module BoringServices
       locator.port_for('redis') || 6379
     end
 
-    # Build Redis URL
-    def redis_url(region: nil, password: nil, db: 0)
-      locator.redis_url(region: region, password: password, db: db)
+    # Build Redis URL for a label
+    def redis_url(label: nil, password: nil, db: 0)
+      locator.redis_url(label: label, password: password, db: db)
     end
 
-    # Get Memcached host for a region
-    def memcached_host(region = nil)
-      region ? locator.host_for_region('memcached', region) : locator.primary_host('memcached')
+    # Get all Memcached hosts as hash { label => private_ip }
+    def memcached_hosts
+      locator.hosts_by_label('memcached')
+    end
+
+    # Get Memcached host by exact label
+    def memcached_host(label)
+      locator.host_by_label('memcached', label)
     end
 
     # Get Memcached port
@@ -65,13 +75,18 @@ module BoringServices
     end
 
     # Get Memcached servers string (host:port,host:port)
-    def memcached_servers(region: nil)
-      locator.memcached_servers(region: region)
+    def memcached_servers(label: nil)
+      locator.memcached_servers(label: label)
     end
 
-    # Generic: get host for any service by region
-    def host_for(service, region = nil)
-      region ? locator.host_for_region(service, region) : locator.primary_host(service)
+    # Generic: get all hosts for any service as hash { label => ip }
+    def hosts_for(service)
+      locator.hosts_by_label(service)
+    end
+
+    # Generic: get host by exact label for any service
+    def host_for(service, label)
+      locator.host_by_label(service, label)
     end
 
     # Generic: get port for any service

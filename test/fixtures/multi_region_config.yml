@@ -1,0 +1,52 @@
+test:
+  user: testuser
+  ssh_key: ~/.ssh/test_key
+  services:
+    # Multiple redis instances with labels (production style - single host per entry)
+    - name: redis
+      enabled: true
+      host: 34.7.102.70
+      private_ip: 10.8.0.10
+      label: redis-eu-gcp
+      port: 6379
+
+    - name: redis
+      enabled: true
+      host: 34.13.1.35
+      private_ip: 10.8.0.11
+      label: redis-london-gcp
+      port: 6379
+
+    - name: redis
+      enabled: true
+      host: 18.119.201.71
+      private_ip: 10.8.0.60
+      label: redis-us-aws
+      port: 6379
+
+    - name: redis
+      enabled: true
+      host: 34.132.214.63
+      private_ip: 10.8.0.61
+      label: redis-us-gcp
+      port: 6379
+
+    # Memcached with hosts array containing hashes
+    - name: memcached
+      enabled: true
+      hosts:
+        - host: 54.1.2.3
+          private_ip: 10.8.0.20
+          label: memcached-us-east
+        - host: 54.4.5.6
+          private_ip: 10.8.0.21
+          label: memcached-us-west
+      port: 11211
+
+    # Simple hosts array (no labels/private_ips)
+    - name: haproxy
+      enabled: true
+      hosts:
+        - 10.0.0.100
+        - 10.0.0.101
+      port: 80
