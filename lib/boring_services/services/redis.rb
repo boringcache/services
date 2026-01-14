@@ -33,9 +33,10 @@ module BoringServices
         memory = memory_mb || 256
         listen_port = port || 6379
         password = resolve_secret('redis_password') if config.secrets['redis_password']
+        bind_address = private_ip.to_s.strip.empty? ? "0.0.0.0" : "127.0.0.1 #{private_ip}"
 
         config_content = <<~REDIS
-          bind 0.0.0.0
+          bind #{bind_address}
           port #{listen_port}
           dir /var/lib/redis
           maxmemory #{memory}mb
