@@ -33,7 +33,8 @@ module BoringServices
         memory = memory_mb || 256
         listen_port = port || 6379
         password = resolve_secret('redis_password') if config.secrets['redis_password']
-        bind_address = private_ip.to_s.strip.empty? ? "0.0.0.0" : "127.0.0.1 #{private_ip}"
+        has_private_ip = !private_ip.to_s.strip.empty?
+        bind_address = has_private_ip ? "127.0.0.1 #{private_ip}" : "0.0.0.0"
 
         config_content = <<~REDIS
           bind #{bind_address}
@@ -52,9 +53,28 @@ module BoringServices
         execute :sudo, :chown, 'redis:redis', '/etc/redis/redis.conf'
         execute :sudo, :chmod, '640', '/etc/redis/redis.conf'
 
+        # If using private IP (WireGuard), ensure Redis starts after WireGuard
+        if has_private_ip
+          configure_wireguard_dependency
+        end
+
         # Set vm.overcommit_memory for Redis background saves
         execute :sudo, :sysctl, '-w', 'vm.overcommit_memory=1'
         execute "echo 'vm.overcommit_memory = 1' | sudo tee -a /etc/sysctl.conf > /dev/null || true"
+      end
+
+      def configure_wireguard_dependency
+        override_dir = '/etc/systemd/system/redis-server.service.d'
+        override_content = <<~SYSTEMD
+          [Unit]
+          After=wg-quick@wg0.service
+          Wants=wg-quick@wg0.service
+        SYSTEMD
+
+        execute :sudo, :mkdir, '-p', override_dir
+        upload! StringIO.new(override_content), '/tmp/wireguard-dependency.conf'
+        execute :sudo, :mv, '/tmp/wireguard-dependency.conf', "#{override_dir}/wireguard.conf"
+        execute :sudo, :systemctl, 'daemon-reload'
       end
     end
   end
