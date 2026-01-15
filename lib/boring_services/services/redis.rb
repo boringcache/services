@@ -7,7 +7,7 @@ module BoringServices
           ssh_executor.install_package('redis-server')
           configure_redis
           ssh_executor.systemd_enable('redis-server')
-          ssh_executor.systemd_start('redis-server')
+          ssh_executor.systemd_restart('redis-server')
         end
       end
 
@@ -23,6 +23,14 @@ module BoringServices
       def restart
         execute_on_host do
           puts "  Restarting Redis on #{label || host}..."
+          ssh_executor.systemd_restart('redis-server')
+        end
+      end
+
+      def reconfigure
+        execute_on_host do
+          puts "  Reconfiguring Redis on #{label || host}..."
+          configure_redis
           ssh_executor.systemd_restart('redis-server')
         end
       end
