@@ -1,4 +1,7 @@
 require 'English'
+require 'open3'
+require 'shellwords'
+
 module BoringServices
   class Secrets
     def self.resolve(value)
@@ -8,10 +11,10 @@ module BoringServices
 
       if value_str.start_with?('credentials:')
         resolve_rails_credentials(value_str)
-      elsif value_str.start_with?('$')
-        resolve_env_var(value_str)
       elsif value_str.start_with?('$(') && value_str.end_with?(')')
         resolve_command(value_str[2..-2])
+      elsif value_str.start_with?('$')
+        resolve_env_var(value_str)
       else
         value_str
       end
@@ -24,16 +27,19 @@ module BoringServices
 
       # Use rails credentials:show to fetch the value
       # This requires being run from the Rails root directory
-      command = "RAILS_ENV=production bundle exec rails runner \"puts Rails.application.credentials.dig(#{keys.map { |k| ":#{k}" }.join(', ')})\""
-      result = `#{command}`.strip
+      runner = "puts Rails.application.credentials.dig(#{keys.map { |key| key.to_sym.inspect }.join(', ')})"
+      result, stderr, status = Open3.capture3(
+        { 'RAILS_ENV' => ENV.fetch('RAILS_ENV', 'production') },
+        'bundle', 'exec', 'rails', 'runner', runner
+      )
 
-      unless $CHILD_STATUS.success?
-        raise Error, "Failed to resolve Rails credentials: #{key_path}. Make sure you're running from the Rails root directory."
+      unless status.success?
+        detail = stderr.strip.empty? ? 'Make sure you are running from the Rails root directory.' : stderr.strip
+        raise Error, "Failed to resolve Rails credentials: #{key_path}. #{detail}"
       end
 
-      if result.empty?
-        raise Error, "Rails credentials key not found: #{key_path}"
-      end
+      result = result.strip
+      raise Error, "Rails credentials key not found: #{key_path}" if result.empty?
 
       result
     end
@@ -46,10 +52,13 @@ module BoringServices
     end
 
     def self.resolve_command(command)
-      result = `#{command}`.strip
-      raise Error, "Command failed: #{command}" unless $CHILD_STATUS.success?
+      argv = Shellwords.split(command)
+      raise Error, 'Command secret is empty' if argv.empty?
 
-      result
+      result, stderr, status = Open3.capture3(*argv)
+      raise Error, "Command failed: #{argv.first}: #{stderr.strip}" unless status.success?
+
+      result.strip
     end
   end
 end
