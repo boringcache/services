@@ -52,7 +52,8 @@ module BoringServices
       exit 1
     end
 
-    desc 'reconfigure [SERVICE]', 'Reconfigure service(s) - skips package installation, only updates config and restarts'
+    desc 'reconfigure [SERVICE]',
+         'Reconfigure service(s) - skips package installation, only updates config and restarts'
     def reconfigure(service_name = nil)
       config = Configuration.load(options[:config], options[:environment])
       installer = Installer.new(config)
@@ -108,7 +109,7 @@ module BoringServices
     end
 
     def print_memcached_stats(stats)
-      bytes = format_bytes(stats['bytes']&.to_i || 0)
+      bytes = format_bytes(stats['bytes'].to_i)
       conns = stats['curr_connections'] || '0'
       items = stats['curr_items'] || '0'
       hit_rate = calculate_hit_rate(stats['get_hits'], stats['get_misses'])
@@ -116,8 +117,8 @@ module BoringServices
     end
 
     def calculate_hit_rate(hits, misses)
-      hits = hits&.to_i || 0
-      misses = misses&.to_i || 0
+      hits = hits.to_i
+      misses = misses.to_i
       total = hits + misses
       total.positive? ? ((hits.to_f / total) * 100).round(1) : 0
     end

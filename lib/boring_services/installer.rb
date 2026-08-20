@@ -115,9 +115,9 @@ module BoringServices
     end
 
     def print_credentials_summary(hints)
-      puts "\n" + "=" * 50
-      puts "📋 Add to Rails credentials:"
-      puts "=" * 50
+      puts "\n#{'=' * 50}"
+      puts '📋 Add to Rails credentials:'
+      puts '=' * 50
 
       # Group by service type
       grouped = hints.group_by { |h| h[:type] }
@@ -129,14 +129,14 @@ module BoringServices
         by_region = entries.group_by { |e| e[:region] }
         by_region.each do |region, region_entries|
           puts "  #{region}:"
-          puts "    servers:"
+          puts '    servers:'
           region_entries.each do |entry|
             puts "      - #{entry[:server]}  # #{entry[:label]}"
           end
         end
       end
 
-      puts "\n" + "=" * 50
+      puts "\n#{'=' * 50}"
     end
   end
 end

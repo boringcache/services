@@ -9,7 +9,7 @@ module BoringServices
           configure_haproxy
           validate_config
           ssh_executor.systemd_enable('haproxy')
-          ssh_executor.systemd_restart('haproxy')  # Use restart instead of start to reload config
+          ssh_executor.systemd_restart('haproxy') # Use restart instead of start to reload config
           verify_listening_ports
         end
       end
@@ -257,7 +257,7 @@ module BoringServices
         ports_to_check << stats_port
 
         ports_to_check.each do |check_port|
-          result = execute :sudo, :ss, '-tlnp', '|', :grep, "-E", "':#{check_port} '", raise_on_error: false
+          result = execute :sudo, :ss, '-tlnp', '|', :grep, '-E', "':#{check_port} '", raise_on_error: false
           if result
             puts "    ✓ Port #{check_port} is listening"
           else

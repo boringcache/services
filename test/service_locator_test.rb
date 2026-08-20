@@ -93,7 +93,7 @@ class ServiceLocatorTest < Minitest::Test
 
   def test_port_for_returns_port
     assert_equal 6379, @locator.port_for('redis')
-    assert_equal 11211, @locator.port_for('memcached')
+    assert_equal 11_211, @locator.port_for('memcached')
     assert_equal 80, @locator.port_for('haproxy')
   end
 

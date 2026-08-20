@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Require Ruby 4.0 or newer.
+- Align runtime and development dependencies with the maintained toolchain.
+- Add blocking test, lint, dependency-audit, and package-build CI checks.
+- Add automated Bundler and GitHub Actions dependency updates.
+- Clarify that private IP metadata does not configure bind addresses or
+  firewalls.
+
 ## [0.1.0] - 2025-01-21
 
 ### Added
@@ -41,13 +52,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supports Ubuntu 20.04+ servers (Debian-based distributions)
 - YAML-based configuration with ERB support
 - Thor-based CLI interface
-
-## [Unreleased]
-
-### Planned
-- Redis configuration override support
-- Nginx configuration override support
-- Service backup/restore functionality
-- Multi-region deployment helpers
-- Prometheus metrics integration
-- Additional health check options

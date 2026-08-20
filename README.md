@@ -371,9 +371,15 @@ BoringServices supports deploying services over VPN or private networks (e.g., W
 
 - **Public IPs** (`host`) for SSH deployment access
 - **Private IPs** (`private_ip`) for service communication
-- Services listen on all interfaces (0.0.0.0) by default
+- Some generated service configurations listen on all interfaces (`0.0.0.0`)
+  by default
 - Accessible via private network IPs
-- No public exposure of services
+- `private_ip` documents the address clients should use; it does not change the
+  service bind address or configure a firewall
+
+Before deploying, restrict each service port to the intended private CIDRs with
+the provider firewall and the host firewall, or set a supported service-specific
+listen address. A public SSH address does not make a service endpoint private.
 
 **Example with Private IPs:**
 
@@ -428,7 +434,7 @@ haproxy: healthy
 
 ## Requirements
 
-- Ruby 3.0+
+- Ruby 4.0+
 - Ubuntu 20.04+ servers (Debian-based distributions)
 - SSH key-based authentication
 - Optional: VPN solution (WireGuard, Tailscale, etc.) for private networking

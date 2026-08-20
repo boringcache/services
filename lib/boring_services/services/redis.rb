@@ -42,7 +42,7 @@ module BoringServices
         listen_port = port || 6379
         password = resolve_secret('redis_password') if config.secrets['redis_password']
         has_private_ip = !private_ip.to_s.strip.empty?
-        bind_address = has_private_ip ? "127.0.0.1 #{private_ip}" : "0.0.0.0"
+        bind_address = has_private_ip ? "127.0.0.1 #{private_ip}" : '0.0.0.0'
 
         config_content = <<~REDIS
           bind #{bind_address}
@@ -62,9 +62,7 @@ module BoringServices
         execute :sudo, :chmod, '640', '/etc/redis/redis.conf'
 
         # If using private IP (WireGuard), ensure Redis starts after WireGuard
-        if has_private_ip
-          configure_wireguard_dependency
-        end
+        configure_wireguard_dependency if has_private_ip
 
         # Set vm.overcommit_memory for Redis background saves
         execute :sudo, :sysctl, '-w', 'vm.overcommit_memory=1'

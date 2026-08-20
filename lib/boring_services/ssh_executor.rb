@@ -152,10 +152,10 @@ module BoringServices
       end
     end
 
-    def capture_on_host(host, *args)
+    def capture_on_host(host, *)
       output = nil
       execute_on_host(host) do
-        output = capture(*args, raise_on_non_zero_exit: false)
+        output = capture(*, raise_on_non_zero_exit: false)
       end
       output
     end

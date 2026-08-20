@@ -5,7 +5,7 @@ Thank you for your interest in contributing to BoringServices! We welcome contri
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/boring_services.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/services.git`
 3. Create a feature branch: `git checkout -b my-new-feature`
 4. Make your changes
 5. Run tests: `bundle exec rake test`

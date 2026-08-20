@@ -1,9 +1,9 @@
 require 'simplecov'
 SimpleCov.start do
-  add_filter '/test/'
-  add_filter '/vendor/'
-  add_group 'Services', 'lib/boring_services/services'
-  add_group 'Core', 'lib/boring_services'
+  skip '/test/'
+  skip '/vendor/'
+  group 'Services', 'lib/boring_services/services'
+  group 'Core', 'lib/boring_services'
 end
 
 begin

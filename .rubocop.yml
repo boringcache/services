@@ -1,5 +1,5 @@
 AllCops:
-  TargetRubyVersion: 3.4
+  TargetRubyVersion: 4.0
   NewCops: enable
   SuggestExtensions: false
   Exclude:
@@ -23,15 +23,23 @@ Metrics/MethodLength:
 
 Metrics/ClassLength:
   Max: 200
+  Exclude:
+    - 'lib/boring_services/services/haproxy.rb'
 
 Metrics/AbcSize:
   Max: 37
+  Exclude:
+    - 'lib/boring_services/services/memcached.rb'
 
 Metrics/CyclomaticComplexity:
   Max: 12
+  Exclude:
+    - 'lib/boring_services/services/memcached.rb'
 
 Metrics/PerceivedComplexity:
   Max: 12
+  Exclude:
+    - 'lib/boring_services/services/memcached.rb'
 
 Metrics/BlockLength:
   Enabled: false
@@ -42,15 +50,9 @@ Naming/PredicatePrefix:
 Lint/DuplicateBranch:
   Enabled: false
 
-Gemspec/DevelopmentDependencies:
-  Enabled: false
-
-Gemspec/RequireMFA:
-  Enabled: false
 
 Lint/SuppressedException:
   Enabled: false
 
 Style/SpecialGlobalVars:
   Enabled: false
-

@@ -71,7 +71,7 @@ module BoringServices
 
     # Get Memcached port
     def memcached_port
-      locator.port_for('memcached') || 11211
+      locator.port_for('memcached') || 11_211
     end
 
     # Get Memcached servers string (host:port,host:port)

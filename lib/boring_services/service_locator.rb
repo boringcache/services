@@ -66,7 +66,7 @@ module BoringServices
 
       return nil if hosts.empty?
 
-      port = port_for('memcached') || 11211
+      port = port_for('memcached') || 11_211
       hosts.map { |h| "#{h}:#{port}" }.join(',')
     end
 
