@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    boring_services (0.8.0)
+    boring_services (0.8.1)
       bcrypt_pbkdf (~> 1.1)
       ed25519 (~> 1.4)
       sshkit (~> 1.25)
