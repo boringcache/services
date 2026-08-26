@@ -14,6 +14,7 @@ module BoringServices
       @config_path = config_path
       @environment = environment.to_s
       @config = load_config
+      @all_hosts = host_entries
     end
 
     def service_config(service_name)
@@ -42,6 +43,52 @@ module BoringServices
       @config['ssh_key'] || '~/.ssh/id_rsa'
     end
 
+    def ssh_known_hosts_file
+      path = @config['ssh_known_hosts_file']
+      File.expand_path(path) if path
+    end
+
+    def verify_host_key_mode
+      case @config.fetch('verify_host_key', true)
+      when true, 'always', :always then :always
+      when 'accept_new', :accept_new then :accept_new
+      when false, 'never', :never then :never
+      else :always
+      end
+    end
+
+    def host_config(reference)
+      reference = reference.to_s
+      @all_hosts.find do |host|
+        next unless host.is_a?(Hash)
+
+        host['host'].to_s == reference || host['label'].to_s.casecmp?(reference)
+      end
+    end
+
+    def jump_host_config(host)
+      return unless host.is_a?(Hash)
+
+      reference = host['jump_host'] || host[:jump_host]
+      return unless reference
+
+      host_config(reference) || raise(Error, "Jump host not found: #{reference}")
+    end
+
+    def only_host!(reference)
+      selected = host_config(reference)
+      raise Error, "Host not found: #{reference}" unless selected
+
+      @config['services'] = services.filter_map do |service|
+        hosts = Array(service['hosts'] || service['host']).compact
+        matches = hosts.select { |host| same_host?(host, selected) }
+        next if matches.empty?
+
+        service.merge('hosts' => matches).tap { |entry| entry.delete('host') }
+      end
+      self
+    end
+
     def forward_agent
       return @config['forward_agent'] unless @config['forward_agent'].nil?
 
@@ -63,6 +110,16 @@ module BoringServices
     end
 
     private
+
+    def host_entries
+      services.flat_map { |service| Array(service['hosts'] || service['host']).compact }
+    end
+
+    def same_host?(candidate, selected)
+      return candidate.to_s == selected['host'].to_s unless candidate.is_a?(Hash)
+
+      candidate['host'].to_s == selected['host'].to_s
+    end
 
     def load_config
       raise Error, "Config file not found: #{@config_path}" unless File.exist?(@config_path)

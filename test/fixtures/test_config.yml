@@ -10,7 +10,11 @@ test:
     - name: redis
       enabled: true
       hosts:
-        - 10.0.0.1
+        - host: 10.0.0.1
+          label: jump
+        - host: 10.0.0.2
+          label: target
+          jump_host: jump
       port: 6379
     - name: memcached
       enabled: false

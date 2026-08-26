@@ -25,8 +25,10 @@ module BoringServices
     end
 
     desc 'install [SERVICE]', 'Install service(s) - all services or specific service'
+    option :host, type: :string, desc: 'Install only the host matching this label or address'
     def install(service_name = nil)
       config = Configuration.load(options[:config], options[:environment])
+      config.only_host!(options[:host]) if options[:host]
       installer = Installer.new(config)
       service_name ? installer.install_service(service_name) : installer.install_all
     rescue Error => e

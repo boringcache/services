@@ -2,6 +2,8 @@
 
 require 'sshkit'
 require 'sshkit/dsl'
+require 'net/ssh/proxy/command'
+require 'shellwords'
 
 module BoringServices
   class SSHExecutor
@@ -174,8 +176,10 @@ module BoringServices
           forward_agent: config.forward_agent,
           auth_methods: config.ssh_auth_methods,
           keys_only: !config.use_ssh_agent,
-          use_agent: config.use_ssh_agent
+          use_agent: config.use_ssh_agent,
+          verify_host_key: config.verify_host_key_mode
         }
+        ssh.ssh_options[:user_known_hosts_file] = [config.ssh_known_hosts_file] if config.ssh_known_hosts_file
       end
     end
 
@@ -185,19 +189,45 @@ module BoringServices
         target_host = host['host'] || host[:host]
         raise Error, 'Host entry missing host field' unless target_host
 
-        build_sshkit_host(target_host, host['user'] || host[:user])
+        build_sshkit_host(target_host, host['user'] || host[:user], host)
       else
         host_string = host.to_s
         return SSHKit::Host.new(host_string) if host_string.include?('@')
 
-        build_sshkit_host(host_string, nil)
+        build_sshkit_host(host_string, nil, nil)
       end
     end
 
-    def build_sshkit_host(hostname, user)
+    def build_sshkit_host(hostname, user, host_config)
       sshkit_host = SSHKit::Host.new(hostname)
       sshkit_host.user = user || config.user
+      if (jump_host = config.jump_host_config(host_config))
+        sshkit_host.ssh_options = { proxy: jump_proxy(jump_host) }
+      end
       sshkit_host
+    end
+
+    def jump_proxy(jump_host)
+      user = jump_host['user'] || config.user
+      command = [
+        'ssh', '-F', '/dev/null',
+        '-o', 'BatchMode=yes',
+        '-o', 'ForwardAgent=no',
+        '-o', "StrictHostKeyChecking=#{open_ssh_host_key_mode}"
+      ]
+      command.push('-o', "UserKnownHostsFile=#{config.ssh_known_hosts_file}") if config.ssh_known_hosts_file
+      command.push('-i', File.expand_path(config.ssh_key), '-o', 'IdentitiesOnly=yes')
+      command.push('-W', '%h:%p', "#{user}@#{jump_host.fetch('host')}")
+      command_line = Shellwords.join(command).gsub('\\%h', '%h').gsub('\\%p', '%p')
+      Net::SSH::Proxy::Command.new(command_line)
+    end
+
+    def open_ssh_host_key_mode
+      case config.verify_host_key_mode
+      when :accept_new then 'accept-new'
+      when :never then 'no'
+      else 'yes'
+      end
     end
   end
 end

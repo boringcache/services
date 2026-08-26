@@ -74,6 +74,17 @@ class ConfigurationTest < Minitest::Test
     assert_equal '~/.ssh/id_rsa', config.ssh_key
   end
 
+  def test_jump_host_resolves_and_host_filter_keeps_only_the_target
+    config = BoringServices::Configuration.new(fixture_path('test_config.yml'), 'test')
+
+    target = config.host_config('target')
+    assert_equal '10.0.0.1', config.jump_host_config(target).fetch('host')
+
+    config.only_host!('target')
+    assert_equal [target], config.service_config('redis').fetch('hosts')
+    assert_equal '10.0.0.1', config.jump_host_config(target).fetch('host')
+  end
+
   def test_forward_agent
     config = BoringServices::Configuration.new(fixture_path('test_config.yml'), 'test')
     assert_equal false, config.forward_agent
