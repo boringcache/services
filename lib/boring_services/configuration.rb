@@ -62,7 +62,9 @@ module BoringServices
       @all_hosts.find do |host|
         next unless host.is_a?(Hash)
 
-        host['host'].to_s == reference || host['label'].to_s.casecmp?(reference)
+        host['host'].to_s == reference ||
+          host['label'].to_s.casecmp?(reference) ||
+          host['name'].to_s.casecmp?(reference)
       end
     end
 

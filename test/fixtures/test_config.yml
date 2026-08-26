@@ -11,7 +11,7 @@ test:
       enabled: true
       hosts:
         - host: 10.0.0.1
-          label: jump
+          name: jump
         - host: 10.0.0.2
           label: target
           jump_host: jump
