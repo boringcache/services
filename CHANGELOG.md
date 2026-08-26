@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Per-host jump routing, strict known-hosts configuration, and a targeted
+  `install --host LABEL` path for safely adding services to a new origin.
+
 ## [0.8.1] - 2026-08-20
 
 ### Changed
