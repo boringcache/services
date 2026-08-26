@@ -201,9 +201,12 @@ module BoringServices
     def build_sshkit_host(hostname, user, host_config)
       sshkit_host = SSHKit::Host.new(hostname)
       sshkit_host.user = user || config.user
+      options = { verify_host_key: config.verify_host_key_mode }
+      options[:user_known_hosts_file] = [config.ssh_known_hosts_file] if config.ssh_known_hosts_file
       if (jump_host = config.jump_host_config(host_config))
-        sshkit_host.ssh_options = { proxy: jump_proxy(jump_host) }
+        options[:proxy] = jump_proxy(jump_host)
       end
+      sshkit_host.ssh_options = options
       sshkit_host
     end
 

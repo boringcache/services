@@ -28,6 +28,8 @@ class SSHExecutorTest < Minitest::Test
       proxy = host.ssh_options.fetch(:proxy)
 
       assert_instance_of Net::SSH::Proxy::Command, proxy
+      assert_equal :always, host.ssh_options.fetch(:verify_host_key)
+      assert_equal [known_hosts.path], host.ssh_options.fetch(:user_known_hosts_file)
       assert_includes proxy.command_line_template, 'ssh -F /dev/null'
       assert_includes proxy.command_line_template, 'StrictHostKeyChecking\\=yes'
       assert_includes proxy.command_line_template, "UserKnownHostsFile\\=#{known_hosts.path}"
