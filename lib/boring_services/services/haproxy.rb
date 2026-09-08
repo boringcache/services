@@ -124,7 +124,7 @@ module BoringServices
         end
       end
 
-      # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+      # rubocop:disable-next Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
       def configure_haproxy
         # Check if custom config template is provided
         if service_config['custom_config_template'] && File.exist?(service_config['custom_config_template'])
@@ -239,7 +239,6 @@ module BoringServices
         execute :sudo, :chown, 'root:root', '/etc/haproxy/haproxy.cfg'
         execute :sudo, :chmod, '644', '/etc/haproxy/haproxy.cfg'
       end
-      # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
 
       def verify_listening_ports
         puts '    Verifying HAProxy is listening on ports...'
