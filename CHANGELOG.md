@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-02
+
+### Changed
+
+- Update development dependencies.
+- Link gem source metadata to the matching release tag.
+
 ### Added
 
 - Per-host jump routing, strict known-hosts configuration, and a targeted
